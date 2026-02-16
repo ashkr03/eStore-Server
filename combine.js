@@ -17,6 +17,7 @@ const client = new MongoClient(uri);
 let db;
 let users;
 let collection;
+let issuesCollection;  // 🔥 ISSUES COLLECTION
 
 async function connectDB() {
   try {
@@ -32,9 +33,12 @@ async function connectDB() {
 
 async function connectDBStore() {
   try {
-    const storeDb = client.db('Store-Item');  
+    const storeDb = client.db('Store-Item');
     collection = storeDb.collection('StoreItems');
+    issuesCollection = storeDb.collection('Issues');  // 🔥 ISSUES COLLECTION CONNECT
+    console.log('Store-Items DB Connected!');
   } catch (error) {
+    console.log('Store DB Error:', error);
   }
 }
 
@@ -42,8 +46,7 @@ async function connectDBStore() {
 connectDB().then(() => {
   connectDBStore();
   
-  // Auth routes define karo connect hone ke baad
-  // Signup
+  // AUTH ROUTES
   app.post('/api/signup', async (req, res) => {
     try {
       const { Name, Email, Password } = req.body;
@@ -59,7 +62,6 @@ connectDB().then(() => {
     }
   });
 
-  // Signin
   app.post('/api/signin', async (req, res) => {
     try {
       const { Email, Password } = req.body;
@@ -74,7 +76,63 @@ connectDB().then(() => {
   });
 });
 
-// Store routes (inme collection check hai, safe hain)
+// 🔥 ISSUES ROUTES (YAHAN ADD KIYA)
+app.post('/api/issues', async (req, res) => {
+  try {
+    const { department, itemId, itemName, itemModel, quantity } = req.body;
+    
+    const newIssue = {
+      department,
+      itemId,
+      itemName,
+      itemModel,
+      issuedQuantity: parseInt(quantity),
+      createdAt: new Date(),
+      status: 'issued',
+    };
+    
+    const issueResult = await issuesCollection.insertOne(newIssue);
+    
+    const item = await collection.findOne({ _id: new ObjectId(itemId) });
+    
+    if (!item) {
+      return res.status(404).json({ error: 'Item not found' });
+    }
+    
+    const currentQty = parseInt(item.Qty);
+    const requestedQty = parseInt(quantity);
+    
+    if (currentQty < requestedQty) {
+      return res.status(400).json({ error: 'Insufficient quantity available' });
+    }
+    
+    const newQty = currentQty - requestedQty;
+    await collection.updateOne(
+      { _id: new ObjectId(itemId) },
+      { $set: { Qty: newQty.toString() } }
+    );
+    
+    res.status(201).json({ 
+      message: 'Issue created successfully', 
+      updatedQuantity: newQty 
+    });
+    
+  } catch (error) {
+    console.error('Issue creation error:', error);
+    res.status(500).json({ error: 'Failed to create issue' });
+  }
+});
+
+app.get('/api/issues', async (req, res) => {
+  try {
+    const issues = await issuesCollection.find({}).toArray();
+    res.json(issues);
+  } catch (error) {
+    res.status(500).json({ error: 'Failed to fetch issues' });
+  }
+});
+
+// STORE ROUTES (Tumhare original)
 app.get('/Store-Items', async (req, res) => {
   if (!collection) return res.json([]);
   const items = await collection.find({}).toArray();
@@ -143,6 +201,5 @@ app.delete('/Store-Items/:id', async (req, res) => {
 const PORT = 5300;
 app.listen(PORT, () => {
   console.log(`🚀 Server http://localhost:${PORT}`);
-  console.log(`📱 Auth: http://localhost:${PORT}/api/signin`);
-  console.log(`🛒 Store: http://localhost:${PORT}/Store-Items`);
+  
 });
