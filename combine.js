@@ -17,7 +17,7 @@ const client = new MongoClient(uri);
 let db;
 let users;
 let collection;
-let issuesCollection;  // 🔥 ISSUES COLLECTION
+let issuesCollection;  //  ISSUES COLLECTION
 
 async function connectDB() {
   try {
@@ -35,7 +35,7 @@ async function connectDBStore() {
   try {
     const storeDb = client.db('Store-Item');
     collection = storeDb.collection('StoreItems');
-    issuesCollection = storeDb.collection('Issues');  // 🔥 ISSUES COLLECTION CONNECT
+    issuesCollection = storeDb.collection('Issues');  //  ISSUES COLLECTION CONNECT
     console.log('Store-Items DB Connected!');
   } catch (error) {
     console.log('Store DB Error:', error);
@@ -76,7 +76,7 @@ connectDB().then(() => {
   });
 });
 
-// 🔥 ISSUES ROUTES (YAHAN ADD KIYA)
+// ISSUES ROUTES 
 app.post('/api/issues', async (req, res) => {
   try {
     const { department, itemId, itemName, itemModel, quantity } = req.body;
@@ -132,7 +132,7 @@ app.get('/api/issues', async (req, res) => {
   }
 });
 
-// STORE ROUTES (Tumhare original)
+// STORE ROUTES 
 app.get('/Store-Items', async (req, res) => {
   if (!collection) return res.json([]);
   const items = await collection.find({}).toArray();
